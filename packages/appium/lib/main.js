@@ -19,6 +19,10 @@ import registerNode from './grid-register';
 import { getDefaultsForSchema, validate } from './schema/schema';
 import { inspect } from './utils';
 
+export * from '@appium/base-driver';
+export * from '@appium/base-plugin';
+export * as support from '@appium/support';
+
 const {resolveAppiumHome} = env;
 
 /**

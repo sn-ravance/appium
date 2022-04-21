@@ -50,9 +50,16 @@ export type ExtMetadata<ExtType extends ExtensionType> =
 
 /**
  * A `package.json` containing extension metadata.
- * Required fields are `name`, `version`, and `appium`.
+ * Must have the following properties:
+ * - `name`: the name of the extension
+ * - `version`: the version of the extension
+ * - `appium`: the metadata for the extension
+ * - `peerDependencies.appium`: the maximum compatible version of Appium
  */
 export type ExtPackageJson<ExtType extends ExtensionType> = SetRequired<
   PackageJson,
   'name' | 'version'
-> & {appium: ExtMetadata<ExtType>};
+> & {
+  appium: ExtMetadata<ExtType>,
+  peerDependencies: {appium: string, [key: string]: string},
+}

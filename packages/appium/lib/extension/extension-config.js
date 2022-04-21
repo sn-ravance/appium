@@ -2,6 +2,9 @@
 import _ from 'lodash';
 import path from 'path';
 import resolveFrom from 'resolve-from';
+import { satisfies } from 'semver';
+import { commandClasses } from '../cli/extension';
+import { APPIUM_VER } from '../config';
 import log from '../logger';
 import {
   ALLOWED_SCHEMA_EXTENSIONS,
@@ -45,6 +48,11 @@ export class ExtensionConfig {
   manifest;
 
   /**
+   * @type {import('../cli/extension-command').ExtensionListData}
+   */
+  _listDataCache;
+
+  /**
    * @protected
    * @param {ExtType} extensionType - Type of extension
    * @param {Manifest} manifest - `Manifest` instance
@@ -71,7 +79,7 @@ export class ExtensionConfig {
    * Checks extensions for problems
    * @param {ExtRecord<ExtType>} exts - Extension data
    */
-  validate (exts) {
+  async _validate (exts) {
     const foundProblems =
       /** @type {Record<ExtName<ExtType>,Problem[]>} */ ({});
     for (const [
@@ -80,6 +88,8 @@ export class ExtensionConfig {
     ] of /** @type {[ExtName<ExtType>, ExtManifest<ExtType>][]} */ (
         _.toPairs(exts)
       )) {
+      await this.displayConfigWarnings(extData, extName);
+
       foundProblems[extName] = [
         ...this.getGenericConfigProblems(extData, extName),
         ...this.getConfigProblems(extData),
@@ -87,6 +97,7 @@ export class ExtensionConfig {
       ];
     }
 
+    /** @type {string[]} */
     const problemSummaries = [];
     for (const [extName, problems] of _.toPairs(foundProblems)) {
       if (_.isEmpty(problems)) {
@@ -96,20 +107,19 @@ export class ExtensionConfig {
       delete exts[extName];
       problemSummaries.push(
         `${this.extensionType} ${extName} had errors and will not ` +
-          `be available. Errors:`,
+          `be available. Errors:`
       );
       for (const problem of problems) {
         problemSummaries.push(
           `  - ${problem.err} (Actual value: ` +
-            `${JSON.stringify(problem.val)})`,
+            `${JSON.stringify(problem.val)})`
         );
       }
     }
 
     if (!_.isEmpty(problemSummaries)) {
       this.log(
-        `Appium encountered one or more errors while validating ` +
-          `the ${this.configKey} extension file (${this.manifestPath}):`,
+        `Appium encountered one or more unrecoverable errors while validating ${this.configKey} found in manifest ${this.manifestPath}`
       );
       for (const summary of problemSummaries) {
         this.log(summary);
@@ -120,11 +130,98 @@ export class ExtensionConfig {
   }
 
   /**
+   * Retrieves listing data for extensions via command class.
+   * Caches the result in {@linkcode ExtensionConfig._listDataCache}
+   * @protected
+   * @returns {import('../cli/extension-command').ExtensionListData}
+   */
+  async getListData () {
+    if (this._listDataCache) {
+      return this._listDataCache;
+    }
+    const CommandClass =
+      /** @type {import('../cli/extension').ExtCommand<ExtType>} */ (
+        commandClasses[this.extensionType]
+      );
+    const cmd = new CommandClass({config: this, json: true});
+    const listData = await cmd.list({showInstalled: true, showUpdates: true});
+    this._listDataCache = listData;
+    return listData;
+  }
+
+  /**
+   * Displays non-"fatal" warnings for the extension
+   *
+   * This method uses Appium's logger, since the default extension logger uses the `error` log level.
+   *
    * @param {ExtManifest<ExtType>} extData
    * @param {ExtName<ExtType>} extName
+   * @returns {Promise<void>}
+   */
+  // eslint-disable-next-line no-unused-vars
+  async displayConfigWarnings (extData, extName) {
+    const {appiumVersion, installSpec, installType} = extData;
+
+    if (!_.isString(installSpec)) {
+      log.warn(
+        `${_.capitalize(
+          this.extensionType
+        )} "${extName}" has an invalid or missing \`installSpec\` property in \`extensions.yaml\`; this may cause upgrades done via the \`appium\` CLI to fail.`
+      );
+    }
+
+    if (!INSTALL_TYPES.has(installType)) {
+      log.warn(
+        `${_.capitalize(
+          this.extensionType
+        )} "${extName}" has an invalid or missing \`installType\` property in \`extensions.yaml\`; this may cause upgrades done via the \`appium\` CLI to fail.`
+      );
+      extData.installType = INSTALL_TYPE_NPM;
+    }
+    if (_.isString(appiumVersion) && !satisfies(APPIUM_VER, appiumVersion)) {
+      const listData = await this.getListData();
+
+      if (listData[extName]) {
+        const extListData =
+          /** @type {import('../cli/extension-command').InstalledExtensionListData} */ (
+            listData[extName]
+          );
+        const {unsafeUpdateVersion, updateVersion, upToDate} = extListData;
+        if (!upToDate) {
+          const upgradeText =
+            unsafeUpdateVersion === updateVersion
+              ? `v${updateVersion}`
+              : `v${updateVersion} or (potentially unsafe) v${unsafeUpdateVersion}`;
+          log.warn(
+            `${_.capitalize(
+              this.extensionType
+            )} "${extName}" may be incompatible with the current version of Appium (v${APPIUM_VER}) due to its peer dependency on Appium v${appiumVersion}. Please upgrade "${extName}" to ${upgradeText}.`
+          );
+        } else {
+          log.warn(
+            `${_.capitalize(
+              this.extensionType
+            )} "${extName}" may be incompatible with the current version of Appium (v${APPIUM_VER}) due to its peer dependency on Appium v${appiumVersion}. Please ask the developer of "${extName}" to update the peer dependency!`
+          );
+        }
+      }
+    } else if (!_.isString(appiumVersion)) {
+      log.warn(
+        `${_.capitalize(
+          this.extensionType
+        )} "${extName}" may be incompatible with the current version of Appium (v${APPIUM_VER}) due to an invalid or missing peer dependency on Appium. Please ask the developer of "${extName}" to update the peer dependency!`
+      );
+    }
+  }
+  /**
+   * Returns list of unrecoverable errors (if any) for the given extension _if_ it has a `schema` property.
+   *
+   * @param {ExtManifest<ExtType>} extData - Extension data (from manifest)
+   * @param {ExtName<ExtType>} extName - Extension name (from manifest)
    * @returns {Problem[]}
    */
   getSchemaProblems (extData, extName) {
+    /** @type {Problem[]} */
     const problems = [];
     const {schema: argSchemaPath} = extData;
     if (ExtensionConfig.extDataHasSchema(extData)) {
@@ -166,44 +263,33 @@ export class ExtensionConfig {
   }
 
   /**
-   * @param {ExtManifest<ExtType>} extData
-   * @param {ExtName<ExtType>} extName
+   * Return a list of generic unrecoverable errors for the given extension
+   * @param {ExtManifest<ExtType>} extData - Extension data (from manifest)
+   * @param {ExtName<ExtType>} extName - Extension name (from manifest)
    * @returns {Problem[]}
    */
   // eslint-disable-next-line no-unused-vars
   getGenericConfigProblems (extData, extName) {
-    const {version, pkgName, installSpec, installType, mainClass} =
-      extData;
+    const {version, pkgName, mainClass} = extData;
     const problems = [];
 
     if (!_.isString(version)) {
-      problems.push({err: 'Missing or incorrect version', val: version});
+      problems.push({
+        err: `Invalid or missing \`version\` field in my \`package.json\` and/or \`extensions.yaml\` (must be a string)`,
+        val: version,
+      });
     }
 
     if (!_.isString(pkgName)) {
       problems.push({
-        err: 'Missing or incorrect NPM package name',
+        err: `Invalid or missing \`name\` field in my \`package.json\` and/or \`extensions.yaml\` (must be a string)`,
         val: pkgName,
-      });
-    }
-
-    if (!_.isString(installSpec)) {
-      problems.push({
-        err: 'Missing or incorrect installation spec',
-        val: installSpec,
-      });
-    }
-
-    if (!INSTALL_TYPES.has(installType)) {
-      problems.push({
-        err: 'Missing or incorrect install type',
-        val: installType,
       });
     }
 
     if (!_.isString(mainClass)) {
       problems.push({
-        err: 'Missing or incorrect driver class name',
+        err: `Invalid or missing \`appium.mainClass\` field in my \`package.json\` and/or \`mainClass\` field in \`extensions.yaml\` (must be a string)`,
         val: mainClass,
       });
     }
@@ -272,7 +358,7 @@ export class ExtensionConfig {
     if (_.isEmpty(this.installedExtensions)) {
       log.info(
         `No ${this.configKey} have been installed in ${this.appiumHome}. Use the "appium ${this.extensionType}" ` +
-          'command to install the one(s) you want to use.',
+          'command to install the one(s) you want to use.'
       );
       return;
     }
@@ -305,7 +391,11 @@ export class ExtensionConfig {
    * @returns {string}
    */
   getInstallPath (extName) {
-    return path.join(this.appiumHome, 'node_modules', this.installedExtensions[extName].pkgName);
+    return path.join(
+      this.appiumHome,
+      'node_modules',
+      this.installedExtensions[extName].pkgName
+    );
   }
 
   /**
@@ -348,12 +438,15 @@ export class ExtensionConfig {
     const {pkgName, schema: argSchemaPath} = extData;
     if (!argSchemaPath) {
       throw new TypeError(
-        `No \`schema\` property found in config for ${extType} ${pkgName} -- why is this function being called?`,
+        `No \`schema\` property found in config for ${extType} ${pkgName} -- why is this function being called?`
       );
     }
     let moduleObject;
     if (_.isString(argSchemaPath)) {
-      const schemaPath = resolveFrom(appiumHome, path.join(pkgName, argSchemaPath));
+      const schemaPath = resolveFrom(
+        appiumHome,
+        path.join(pkgName, argSchemaPath)
+      );
       moduleObject = require(schemaPath);
     } else {
       moduleObject = argSchemaPath;
@@ -389,7 +482,7 @@ export class ExtensionConfig {
       this.appiumHome,
       this.extensionType,
       extName,
-      extData,
+      extData
     );
   }
 }
