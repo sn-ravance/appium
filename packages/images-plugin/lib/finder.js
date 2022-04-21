@@ -1,11 +1,12 @@
 import _ from 'lodash';
 import LRU from 'lru-cache';
-import { imageUtil, util } from '@appium/support';
-import { errors } from '@appium/base-driver';
+import { support, errors } from 'appium';
 import { ImageElement, DEFAULT_TEMPLATE_IMAGE_SCALE,
          IMAGE_EL_TAP_STRATEGY_W3C } from './image-element';
 import { MATCH_TEMPLATE_MODE, compareImages, DEFAULT_MATCH_THRESHOLD } from './compare';
 import log from './logger';
+
+const { imageUtil, util } = support;
 
 const MJSONWP_ELEMENT_KEY = 'ELEMENT';
 const W3C_ELEMENT_KEY = util.W3C_WEB_ELEMENT_IDENTIFIER;
