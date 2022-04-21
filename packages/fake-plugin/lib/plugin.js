@@ -1,6 +1,6 @@
 /* eslint-disable no-case-declarations */
 
-import BasePlugin from '@appium/base-plugin';
+import {BasePlugin} from 'appium';
 import B from 'bluebird';
 
 
