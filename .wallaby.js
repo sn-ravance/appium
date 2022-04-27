@@ -19,8 +19,6 @@ module.exports = (wallaby) => {
       '!./packages/*/gulpfile.js',
       '!./packages/*/scripts/**',
       './packages/*/test/**/fixtures/**/*',
-      './packages/*/test/**/mocks.js',
-      './packages/*/test/helpers.js',
       './babel.config.json',
       // below this are fixtures
       {
@@ -35,23 +33,10 @@ module.exports = (wallaby) => {
         instrument: false,
         pattern: './packages/base-driver/static/**/*',
       },
-      {
-        instrument: false,
-        pattern: './packages/gulp-plugins/build/**/*',
-      },
       '!**/local_appium_home/**',
     ],
     testFramework: 'mocha',
-    tests: [
-      './packages/*/test/**/*-specs.js',
-      './packages/*/test/unit/**/*.spec.js',
-      '!./packages/*/test/**/*-e2e-specs.js',
-      '!./packages/*/test/e2e/**/*',
-      '!./packages/*/node_modules/**',
-      // this is more of an E2E test and it's tedious to run
-      '!./packages/gulp-plugins/test/transpile-specs.js',
-      '!**/local_appium_home/**',
-    ],
+    tests: ['./packages/*/test/unit/**/*.spec.js'],
     workers: {
       restart: true,
     },
