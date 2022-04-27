@@ -1,7 +1,7 @@
 import B from 'bluebird';
 import _ from 'lodash';
-import {BaseDriver, errors} from 'appium';
-import {FakeApp} from './fake-app';
+import { BaseDriver, errors } from 'appium/driver';
+import { FakeApp } from './fake-app';
 import commands from './commands';
 
 class FakeDriver extends BaseDriver {

@@ -1,5 +1,5 @@
-import {support} from 'appium';
-import {readFileSync} from 'fs';
+import { fs } from 'appium/support';
+import { readFileSync } from 'fs';
 import path from 'path';
 import XMLDom from '@xmldom/xmldom';
 import xpath from 'xpath';
