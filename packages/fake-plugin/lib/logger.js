@@ -1,6 +1,4 @@
-import { support } from 'appium';
-
-const { logger } = support;
+import {logger} from 'appium/support';
 
 const log = logger.getLogger('FakePlugin');
 
