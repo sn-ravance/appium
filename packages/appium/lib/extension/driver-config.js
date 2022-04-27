@@ -1,14 +1,12 @@
-
 import _ from 'lodash';
-import { DRIVER_TYPE } from '../constants';
+import {DRIVER_TYPE} from '../constants';
 import log from '../logger';
-import { ExtensionConfig } from './extension-config';
+import {ExtensionConfig} from './extension-config';
 
 /**
  * @extends {ExtensionConfig<DriverType>}
  */
 export class DriverConfig extends ExtensionConfig {
-
   /**
    * A set of unique automation names used by drivers.
    * @type {Set<string>}
@@ -33,7 +31,7 @@ export class DriverConfig extends ExtensionConfig {
    * @param {import('./manifest').Manifest} manifest - Manifest instance
    * @param {DriverConfigOptions} [opts]
    */
-  constructor (manifest, {logFn} = {}) {
+  constructor(manifest, {logFn} = {}) {
     super(DRIVER_TYPE, manifest, logFn);
 
     this.knownAutomationNames = new Set();
@@ -47,11 +45,11 @@ export class DriverConfig extends ExtensionConfig {
    * @throws If `manifest` already associated with a `DriverConfig`
    * @returns {DriverConfig}
    */
-  static create (manifest, {logFn} = {}) {
+  static create(manifest, {logFn} = {}) {
     const instance = new DriverConfig(manifest, {logFn});
     if (DriverConfig.getInstance(manifest)) {
       throw new Error(
-        `Manifest with APPIUM_HOME ${manifest.appiumHome} already has a DriverConfig; use DriverConfig.getInstance() to retrieve it.`,
+        `Manifest with APPIUM_HOME ${manifest.appiumHome} already has a DriverConfig; use DriverConfig.getInstance() to retrieve it.`
       );
     }
     DriverConfig._instances.set(manifest, instance);
@@ -63,14 +61,14 @@ export class DriverConfig extends ExtensionConfig {
    * @param {Manifest} manifest
    * @returns {DriverConfig|undefined}
    */
-  static getInstance (manifest) {
+  static getInstance(manifest) {
     return DriverConfig._instances.get(manifest);
   }
 
   /**
    * Checks extensions for problems
    */
-  async validate () {
+  async validate() {
     this.knownAutomationNames.clear();
     return await super._validate(this.manifest.getExtensionData(DRIVER_TYPE));
   }
@@ -79,7 +77,7 @@ export class DriverConfig extends ExtensionConfig {
    * @param {ExtManifest<DriverType>} extData
    * @returns {import('./extension-config').Problem[]}
    */
-  getConfigProblems (extData) {
+  getConfigProblems(extData) {
     const problems = [];
     const {platformNames, automationName} = extData;
 
@@ -131,7 +129,7 @@ export class DriverConfig extends ExtensionConfig {
    * @param {ExtManifest<DriverType>} extData
    * @returns {string}
    */
-  extensionDesc (driverName, {version, automationName}) {
+  extensionDesc(driverName, {version, automationName}) {
     return `${driverName}@${version} (automationName '${automationName}')`;
   }
 
@@ -140,7 +138,7 @@ export class DriverConfig extends ExtensionConfig {
    * @param {Capabilities} caps
    * @returns {MatchedDriver}
    */
-  findMatchingDriver ({automationName, platformName}) {
+  findMatchingDriver({automationName, platformName}) {
     if (!_.isString(platformName)) {
       throw new Error('You must include a platformName capability');
     }
@@ -151,20 +149,20 @@ export class DriverConfig extends ExtensionConfig {
 
     log.info(
       `Attempting to find matching driver for automationName ` +
-        `'${automationName}' and platformName '${platformName}'`,
+        `'${automationName}' and platformName '${platformName}'`
     );
 
     try {
       const {driverName, mainClass, version} = this._getDriverBySupport(
         automationName,
-        platformName,
+        platformName
       );
       log.info(`The '${driverName}' driver was installed and matched caps.`);
       log.info(`Will require it at ${this.getInstallPath(driverName)}`);
       const driver = this.require(driverName);
       if (!driver) {
         throw new Error(
-          `Driver '${driverName}' did not export a class with name '${mainClass}'. Contact the author of the driver!`,
+          `Driver '${driverName}' did not export a class with name '${mainClass}'. Contact the author of the driver!`
         );
       }
       return {driver, version, driverName};
@@ -185,7 +183,7 @@ export class DriverConfig extends ExtensionConfig {
    * @param {string} matchPlatformName
    * @returns {ExtMetadata<DriverType> & import('appium/types').InternalMetadata & import('appium/types').CommonMetadata}
    */
-  _getDriverBySupport (matchAutomationName, matchPlatformName) {
+  _getDriverBySupport(matchAutomationName, matchPlatformName) {
     const drivers = this.installedExtensions;
     for (const [driverName, driverData] of _.toPairs(drivers)) {
       const {automationName, platformNames} = driverData;
@@ -193,7 +191,7 @@ export class DriverConfig extends ExtensionConfig {
         automationName.toLowerCase() === matchAutomationName.toLowerCase();
       const pNameMatches = _.includes(
         platformNames.map(_.toLower),
-        matchPlatformName.toLowerCase(),
+        matchPlatformName.toLowerCase()
       );
 
       if (aNameMatches && pNameMatches) {
@@ -206,7 +204,7 @@ export class DriverConfig extends ExtensionConfig {
             `'${automationName}', but Appium could not find ` +
             `support for platformName '${matchPlatformName}'. Supported ` +
             `platformNames are: ` +
-            JSON.stringify(platformNames),
+            JSON.stringify(platformNames)
         );
       }
     }
@@ -249,7 +247,7 @@ export class DriverConfig extends ExtensionConfig {
 /**
  * Return value of {@linkcode DriverConfig.findMatchingDriver}
  * @typedef MatchedDriver
- * @property {import('appium/types').DriverClass} driver
+ * @property {import('@appium/base-driver').DriverClass} driver
  * @property {string} version
  * @property {string} driverName
  */

@@ -1,10 +1,9 @@
-
 import _ from 'lodash';
 import path from 'path';
 import resolveFrom from 'resolve-from';
-import { satisfies } from 'semver';
-import { commandClasses } from '../cli/extension';
-import { APPIUM_VER } from '../config';
+import {satisfies} from 'semver';
+import {commandClasses} from '../cli/extension';
+import {APPIUM_VER} from '../config';
 import log from '../logger';
 import {
   ALLOWED_SCHEMA_EXTENSIONS,
@@ -58,7 +57,7 @@ export class ExtensionConfig {
    * @param {Manifest} manifest - `Manifest` instance
    * @param {ExtensionLogFn} [logFn]
    */
-  constructor (extensionType, manifest, logFn) {
+  constructor(extensionType, manifest, logFn) {
     const logger = _.isFunction(logFn) ? logFn : log.error.bind(log);
     this.extensionType = extensionType;
     this.configKey = `${extensionType}s`;
@@ -67,11 +66,11 @@ export class ExtensionConfig {
     this.manifest = manifest;
   }
 
-  get manifestPath () {
+  get manifestPath() {
     return this.manifest.manifestPath;
   }
 
-  get appiumHome () {
+  get appiumHome() {
     return this.manifest.appiumHome;
   }
 
@@ -79,15 +78,15 @@ export class ExtensionConfig {
    * Checks extensions for problems
    * @param {ExtRecord<ExtType>} exts - Extension data
    */
-  async _validate (exts) {
+  async _validate(exts) {
     const foundProblems =
       /** @type {Record<ExtName<ExtType>,Problem[]>} */ ({});
     for (const [
       extName,
       extData,
     ] of /** @type {[ExtName<ExtType>, ExtManifest<ExtType>][]} */ (
-        _.toPairs(exts)
-      )) {
+      _.toPairs(exts)
+    )) {
       await this.displayConfigWarnings(extData, extName);
 
       foundProblems[extName] = [
@@ -135,7 +134,7 @@ export class ExtensionConfig {
    * @protected
    * @returns {import('../cli/extension-command').ExtensionListData}
    */
-  async getListData () {
+  async getListData() {
     if (this._listDataCache) {
       return this._listDataCache;
     }
@@ -159,7 +158,7 @@ export class ExtensionConfig {
    * @returns {Promise<void>}
    */
   // eslint-disable-next-line no-unused-vars
-  async displayConfigWarnings (extData, extName) {
+  async displayConfigWarnings(extData, extName) {
     const {appiumVersion, installSpec, installType} = extData;
 
     if (!_.isString(installSpec)) {
@@ -220,7 +219,7 @@ export class ExtensionConfig {
    * @param {ExtName<ExtType>} extName - Extension name (from manifest)
    * @returns {Problem[]}
    */
-  getSchemaProblems (extData, extName) {
+  getSchemaProblems(extData, extName) {
     /** @type {Problem[]} */
     const problems = [];
     const {schema: argSchemaPath} = extData;
@@ -269,7 +268,7 @@ export class ExtensionConfig {
    * @returns {Problem[]}
    */
   // eslint-disable-next-line no-unused-vars
-  getGenericConfigProblems (extData, extName) {
+  getGenericConfigProblems(extData, extName) {
     const {version, pkgName, mainClass} = extData;
     const problems = [];
 
@@ -303,7 +302,7 @@ export class ExtensionConfig {
    * @returns {Problem[]}
    */
   // eslint-disable-next-line no-unused-vars
-  getConfigProblems (extData) {
+  getConfigProblems(extData) {
     // shoud override this method if special validation is necessary for this extension type
     return [];
   }
@@ -314,7 +313,7 @@ export class ExtensionConfig {
    * @param {ExtensionConfigMutationOpts} [opts]
    * @returns {Promise<void>}
    */
-  async addExtension (extName, extData, {write = true} = {}) {
+  async addExtension(extName, extData, {write = true} = {}) {
     this.manifest.addExtension(this.extensionType, extName, extData);
     if (write) {
       await this.manifest.write();
@@ -327,7 +326,7 @@ export class ExtensionConfig {
    * @param {ExtensionConfigMutationOpts} [opts]
    * @returns {Promise<void>}
    */
-  async updateExtension (extName, extData, {write = true} = {}) {
+  async updateExtension(extName, extData, {write = true} = {}) {
     this.installedExtensions[extName] = {
       ...this.installedExtensions[extName],
       ...extData,
@@ -342,7 +341,7 @@ export class ExtensionConfig {
    * @param {ExtensionConfigMutationOpts} [opts]
    * @returns {Promise<void>}
    */
-  async removeExtension (extName, {write = true} = {}) {
+  async removeExtension(extName, {write = true} = {}) {
     delete this.installedExtensions[extName];
     if (write) {
       await this.manifest.write();
@@ -354,7 +353,7 @@ export class ExtensionConfig {
    * @returns {void}
    */
   // eslint-disable-next-line no-unused-vars
-  print (activeNames) {
+  print(activeNames) {
     if (_.isEmpty(this.installedExtensions)) {
       log.info(
         `No ${this.configKey} have been installed in ${this.appiumHome}. Use the "appium ${this.extensionType}" ` +
@@ -368,8 +367,8 @@ export class ExtensionConfig {
       extName,
       extData,
     ] of /** @type {[string, ExtManifest<ExtType>][]} */ (
-        _.toPairs(this.installedExtensions)
-      )) {
+      _.toPairs(this.installedExtensions)
+    )) {
       log.info(`  - ${this.extensionDesc(extName, extData)}`);
     }
   }
@@ -382,7 +381,7 @@ export class ExtensionConfig {
    * @abstract
    */
   // eslint-disable-next-line no-unused-vars
-  extensionDesc (extName, extData) {
+  extensionDesc(extName, extData) {
     throw new Error('This must be implemented in a subclass');
   }
 
@@ -390,7 +389,7 @@ export class ExtensionConfig {
    * @param {string} extName
    * @returns {string}
    */
-  getInstallPath (extName) {
+  getInstallPath(extName) {
     return path.join(
       this.appiumHome,
       'node_modules',
@@ -403,7 +402,7 @@ export class ExtensionConfig {
    * @param {ExtName<ExtType>} extName
    * @returns {ExtClass<ExtType>}
    */
-  require (extName) {
+  require(extName) {
     const {mainClass} = this.installedExtensions[extName];
     const reqPath = this.getInstallPath(extName);
     const reqResolved = require.resolve(reqPath);
@@ -420,7 +419,7 @@ export class ExtensionConfig {
    * @param {string} extName
    * @returns {boolean}
    */
-  isInstalled (extName) {
+  isInstalled(extName) {
     return _.includes(Object.keys(this.installedExtensions), extName);
   }
 
@@ -434,7 +433,7 @@ export class ExtensionConfig {
    * @param {ExtManifestWithSchema<ExtType>} extData - Extension config
    * @returns {import('ajv').SchemaObject|undefined}
    */
-  static _readExtensionSchema (appiumHome, extType, extName, extData) {
+  static _readExtensionSchema(appiumHome, extType, extName, extData) {
     const {pkgName, schema: argSchemaPath} = extData;
     if (!argSchemaPath) {
       throw new TypeError(
@@ -466,7 +465,7 @@ export class ExtensionConfig {
    * @param {ExtManifest<ExtType>} extData
    * @returns {extData is ExtManifestWithSchema<ExtType>}
    */
-  static extDataHasSchema (extData) {
+  static extDataHasSchema(extData) {
     return _.isString(extData?.schema) || _.isObject(extData?.schema);
   }
 
@@ -477,7 +476,7 @@ export class ExtensionConfig {
    * @param {ExtManifestWithSchema<ExtType>} extData - Extension data
    * @returns {import('ajv').SchemaObject|undefined}
    */
-  readExtensionSchema (extName, extData) {
+  readExtensionSchema(extName, extData) {
     return ExtensionConfig._readExtensionSchema(
       this.appiumHome,
       this.extensionType,
@@ -510,7 +509,7 @@ export {
  */
 
 /**
- * @typedef {import('appium/types').ExtensionType} ExtensionType
+ * @typedef {import('@appium/types').ExtensionType} ExtensionType
  * @typedef {import('./manifest').Manifest} Manifest
  */
 
