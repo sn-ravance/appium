@@ -351,9 +351,9 @@ export { finalizeSchema, getSchema, validate } from './schema/schema';
 export { main, init, resolveAppiumHome };
 
 /**
- * @typedef {import('appium/types').DriverType} DriverType
- * @typedef {import('appium/types').PluginType} PluginType
  * @typedef {import('appium/types').DriverClass} DriverClass
+ * @typedef {import('@appium/types').DriverType} DriverType
+ * @typedef {import('@appium/types').PluginType} PluginType
  * @typedef {import('appium/types').PluginClass} PluginClass
  * @typedef {import('appium/types').WithServerSubcommand} WithServerSubcommand
  */
